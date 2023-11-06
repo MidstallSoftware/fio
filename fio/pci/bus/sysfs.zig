@@ -7,11 +7,11 @@ const Device = @import("../device.zig");
 const Sysfs = @This();
 
 pub const Options = struct {
-    allocator: std.mem.Allocator,
+    allocator: Allocator,
     domain: u32 = 0,
 };
 
-allocator: std.mem.Allocator,
+allocator: Allocator,
 domain: u32,
 base: Base,
 
