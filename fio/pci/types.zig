@@ -56,11 +56,19 @@ pub const Register = enum(u8) {
     }
 };
 
+pub const BarMem = packed struct { always0: u1, type: u1, prefetch: u1, address: u29 };
+
+pub const BarIo = packed struct {
+    always1: u1,
+    reserved: u1,
+    address: u30,
+};
+
 pub const Bar = union(enum) {
-    mem: packed struct { always0: u1, type: u1, prefetch: u1, address: u29 },
-    io: packed struct {
-        always1: u1,
-        reserved: u1,
-        address: u30,
-    },
+    mem: BarMem,
+    io: BarIo,
+
+    pub fn decode(v: u32) Bar {
+        return if (v & 0x1 != 0) .{ .io = @bitCast(v) } else .{ .mem = @bitCast(v) };
+    }
 };

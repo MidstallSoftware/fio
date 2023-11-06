@@ -42,7 +42,14 @@ pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptio
     });
 
     inline for (@typeInfo(types.Register).Enum.fields) |f| {
-        try writer.print(", .{s} = 0x{x}", .{ f.name, self.read(@enumFromInt(f.value)) });
+        const value = self.read(@enumFromInt(f.value));
+        try writer.print(", .{s} = ", .{ f.name });
+
+        if (std.mem.startsWith(u8, f.name, "bar")) {
+            try writer.print("{}", .{ types.Bar.decode(value) });
+        } else {
+            try writer.print("0x{x}", .{ value });
+        }
     }
 
     try writer.writeAll(" }");
