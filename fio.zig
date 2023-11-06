@@ -1,3 +1,4 @@
-const options = @import("fio.options");
-
-pub const platform = if (@hasDecl(options, "platform")) @field(@import("fio/platforms.zig"), @tagName(options.platform)) else @compileError("Platform has not been set.");
+pub const io = switch (@import("builtin").cpu.arch) {
+    .x86, .x86_64, => @import("fio/io/x86.zig"),
+    else => struct {},
+};
