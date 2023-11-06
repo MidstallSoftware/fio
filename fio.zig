@@ -36,3 +36,5 @@ pub const IO = union(enum) {
         }
     }
 };
+
+pub const pci = @import("fio/pci.zig");
