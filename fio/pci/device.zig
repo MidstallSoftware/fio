@@ -34,12 +34,16 @@ pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptio
     _ = fmt;
     _ = options;
 
-    return writer.print("{s} {{ .address = {{ .bus = {}, .dev = {}, .func = {} }}, .vendor = 0x{x}, .device = 0x{x} }}", .{
+    try writer.print("{s} {{ .address = {{ .bus = {}, .dev = {}, .func = {} }}", .{
         @typeName(Self),
         self.bus,
         self.dev,
         self.func,
-        self.read(.vendor),
-        self.read(.device),
     });
+
+    inline for (@typeInfo(types.Register).Enum.fields) |f| {
+        try writer.print(", .{s} = 0x{x}", .{ f.name, self.read(@enumFromInt(f.value)) });
+    }
+
+    try writer.writeAll(" }");
 }

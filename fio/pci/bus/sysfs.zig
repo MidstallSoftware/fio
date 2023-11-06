@@ -44,6 +44,7 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         .revision => "revision",
         .subsysVendor => "subsystem_vendor",
         .subsysId => "subsystem_device",
+        .command, .status, .progIface, .subclass, .cacheLineSize, .latencyTimer, .headerType => "config",
         else => null,
     };
 
@@ -77,13 +78,18 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         var buf = file.readToEndAlloc(self.allocator, metadata.size()) catch return default << shift;
         defer self.allocator.free(buf);
 
-        var i: usize = 0;
-        while (i < buf.len and (std.ascii.isHex(buf[i]) or buf[i] == 'x')) : (i += 1) {}
+        return switch (reg) {
+            .command, .status, .progIface, .subclass, .cacheLineSize, .latencyTimer, .headerType => @as(u32, @intCast(buf[addr.reg])) << shift,
+            else => blk: {
+                var i: usize = 0;
+                while (i < buf.len and (std.ascii.isHex(buf[i]) or buf[i] == 'x')) : (i += 1) {}
 
-        return (std.fmt.parseInt(u32, buf[0..i], 0) catch |e| std.debug.panic("Failed to parse int \"{s}\": {s}", .{
-            buf[0..i],
-            @errorName(e),
-        })) << shift;
+                break :blk (std.fmt.parseInt(u32, buf[0..i], 0) catch |e| std.debug.panic("Failed to parse int \"{s}\": {s}", .{
+                    buf[0..i],
+                    @errorName(e),
+                })) << shift;
+            },
+        };
     }
     return default << shift;
 }
