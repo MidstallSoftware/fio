@@ -1,5 +1,8 @@
+const builtin = @import("builtin");
+const std = @import("std");
+
 // Port IO
-pub const port = switch (@import("builtin").cpu.arch) {
+pub const port = switch (builtin.cpu.arch) {
     .x86,
     .x86_64,
     => @import("fio/port/x86.zig"),
@@ -7,23 +10,29 @@ pub const port = switch (@import("builtin").cpu.arch) {
 };
 
 // Memory mapped IO
-pub const mem = @import("fio/mem.zig");
+pub const mem = switch (builtin.os.tag) {
+    .linux => @import("fio/mem/linux.zig"),
+    else => @import("fio/mem/freestanding.zig"),
+};
 
 pub const IO = union(enum) {
     port: u16,
-    mem: usize,
+    mem: struct {
+        allocator: std.mem.Allocator,
+        address: usize,
+    },
 
     pub inline fn read(self: IO, comptime T: type) T {
         return switch (self) {
             .port => |p| port.in(T, p),
-            .mem => |a| mem.read(T, a),
+            .mem => |m| mem.read(T, m.allocator, m.address),
         };
     }
 
     pub inline fn write(self: IO, data: anytype) void {
         switch (self) {
             .port => |p| port.out(p, data),
-            .mem => |a| mem.write(a, data),
+            .mem => |m| mem.write(m.address, data),
         }
     }
 };
