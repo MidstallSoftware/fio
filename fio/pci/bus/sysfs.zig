@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Base = @import("base.zig");
@@ -37,16 +38,6 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
     const self: *Sysfs = @ptrCast(@alignCast(ctx));
 
     const reg: types.Register = @enumFromInt(addr.reg);
-    const _filename: ?[]const u8 = switch (reg) {
-        .vendor => "vendor",
-        .device => "device",
-        .class => "class",
-        .revision => "revision",
-        .subsysVendor => "subsystem_vendor",
-        .subsysId => "subsystem_device",
-        .command, .status, .progIface, .subclass, .cacheLineSize, .latencyTimer, .headerType => "config",
-        else => null,
-    };
 
     const shift = switch (reg.width()) {
         8 => @as(u5, @intCast(addr.reg & 0x3)) * 8,
@@ -60,38 +51,28 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         else => 0,
     };
 
-    if (_filename) |filename| {
-        const path = std.fmt.allocPrint(self.allocator, "/sys/bus/pci/devices/{d:0>4}:{d:0>2}:{d:0>2}.{d:1}/{s}", .{
-            self.domain,
-            addr.bus,
-            addr.dev,
-            addr.func,
-            filename,
-        }) catch |e| std.debug.panic("Failed to allocate PCI device path: {s}", .{@errorName(e)});
-        defer self.allocator.free(path);
+    const path = std.fmt.allocPrint(self.allocator, "/sys/bus/pci/devices/{d:0>4}:{d:0>2}:{d:0>2}.{d:1}/config", .{
+        self.domain,
+        addr.bus,
+        addr.dev,
+        addr.func,
+    }) catch |e| std.debug.panic("Failed to allocate PCI device path: {s}", .{@errorName(e)});
+    defer self.allocator.free(path);
 
-        const file = std.fs.openFileAbsolute(path, .{}) catch return default << shift;
-        defer file.close();
+    const file = std.fs.openFileAbsolute(path, .{}) catch return default << shift;
+    defer file.close();
 
-        const metadata = file.metadata() catch return default << shift;
+    const metadata = file.metadata() catch return default << shift;
 
-        var buf = file.readToEndAlloc(self.allocator, metadata.size()) catch return default << shift;
-        defer self.allocator.free(buf);
+    const buf = file.readToEndAlloc(self.allocator, metadata.size()) catch return default << shift;
+    defer self.allocator.free(buf);
 
-        return switch (reg) {
-            .command, .status, .progIface, .subclass, .cacheLineSize, .latencyTimer, .headerType => @as(u32, @intCast(buf[addr.reg])) << shift,
-            else => blk: {
-                var i: usize = 0;
-                while (i < buf.len and (std.ascii.isHex(buf[i]) or buf[i] == 'x')) : (i += 1) {}
-
-                break :blk (std.fmt.parseInt(u32, buf[0..i], 0) catch |e| std.debug.panic("Failed to parse int \"{s}\": {s}", .{
-                    buf[0..i],
-                    @errorName(e),
-                })) << shift;
-            },
-        };
-    }
-    return default << shift;
+    return (switch (reg.width()) {
+        8 => buf[addr.reg],
+        16 => std.mem.readInt(u16, buf[addr.reg..][0..2], builtin.cpu.arch.endian()),
+        32 => std.mem.readInt(u32, buf[addr.reg..][0..4], builtin.cpu.arch.endian()),
+        else => @panic("Invalid width"),
+    }) << shift;
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
