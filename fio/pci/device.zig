@@ -1,3 +1,4 @@
+const std = @import("std");
 const Bus = @import("bus/base.zig");
 const types = @import("types.zig");
 const Self = @This();
@@ -27,4 +28,18 @@ pub fn read(self: Self, comptime reg: types.Register) reg.type() {
         else => |T| @compileError("Invalid type: " ++ @typeName(T)),
     };
     return @as(reg.type(), @truncate(res >> shift));
+}
+
+pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
+    _ = fmt;
+    _ = options;
+
+    return writer.print("{s} {{ .address = {{ .bus = {}, .dev = {}, .func = {} }}, .vendor = 0x{x}, .device = 0x{x} }}", .{
+        @typeName(Self),
+        self.bus,
+        self.dev,
+        self.func,
+        self.read(.vendor),
+        self.read(.device),
+    });
 }

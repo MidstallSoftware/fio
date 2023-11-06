@@ -47,13 +47,20 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         else => null,
     };
 
+    const shift = switch (reg.width()) {
+        8 => @as(u5, @intCast(addr.reg & 0x3)) * 8,
+        16 => @as(u5, @intCast(addr.reg & 0x2)) * 8,
+        32 => 0,
+        else => @panic("Invalid width"),
+    };
+
     const default: u32 = switch (reg) {
         .device, .vendor, .subsysId, .subsysVendor => 0xffff,
         else => 0,
     };
 
     if (_filename) |filename| {
-        const path = std.fmt.allocPrint(self.allocator, "/sys/bus/pci/devices/{d:.4}:{d:.2}:{d:.2}:{d:.1}/{s}", .{
+        const path = std.fmt.allocPrint(self.allocator, "/sys/bus/pci/devices/{d:0>4}:{d:0>2}:{d:0>2}.{d:1}/{s}", .{
             self.domain,
             addr.bus,
             addr.dev,
@@ -62,17 +69,23 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         }) catch |e| std.debug.panic("Failed to allocate PCI device path: {s}", .{@errorName(e)});
         defer self.allocator.free(path);
 
-        const file = std.fs.openFileAbsolute(path, .{}) catch return default;
+        const file = std.fs.openFileAbsolute(path, .{}) catch return default << shift;
         defer file.close();
 
-        const metadata = file.metadata() catch return default;
+        const metadata = file.metadata() catch return default << shift;
 
-        var buf = self.allocator.alloc(u8, metadata.size()) catch return default;
+        var buf = file.readToEndAlloc(self.allocator, metadata.size()) catch return default << shift;
         defer self.allocator.free(buf);
 
-        return std.fmt.parseInt(u32, buf, 0) catch default;
+        var i: usize = 0;
+        while (i < buf.len and (std.ascii.isHex(buf[i]) or buf[i] == 'x')) : (i += 1) {}
+
+        return (std.fmt.parseInt(u32, buf[0..i], 0) catch |e| std.debug.panic("Failed to parse int \"{s}\": {s}", .{
+            buf[0..i],
+            @errorName(e),
+        })) << shift;
     }
-    return default;
+    return default << shift;
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
