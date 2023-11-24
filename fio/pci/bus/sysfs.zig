@@ -80,7 +80,7 @@ fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
     var devices = std.ArrayList(Device).init(self.allocator);
     errdefer devices.deinit();
 
-    var dir = try std.fs.openIterableDirAbsolute("/sys/bus/pci/devices", .{});
+    var dir = try std.fs.openDirAbsolute("/sys/bus/pci/devices", .{ .iterate = true });
     defer dir.close();
 
     var iter = dir.iterate();
