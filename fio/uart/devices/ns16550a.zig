@@ -3,7 +3,7 @@ const Base = @import("../base.zig");
 
 fn setFcr(baseAddress: usize, dmaMode: u8) void {
     const ptr: *volatile u8 = @ptrFromInt(baseAddress + 2);
-    ptr.* = @as(usize, 1) << (dmaMode << 3);
+    ptr.* = @as(u8, 1) | (@as(u6, @intCast(dmaMode)) << 3);
 }
 
 fn setLcr(
