@@ -38,6 +38,8 @@ pub fn init(options: Base.Options) Base.Error!void {
         true,
     );
 
+    setFcr(options.baseAddress, options.dmaMode);
+
     const ptr: *volatile u16 = @ptrFromInt(options.baseAddress);
     ptr.* = options.divisor;
 
