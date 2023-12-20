@@ -50,7 +50,7 @@ pub const Options = struct {
     stickyParity: bool,
     breakSet: bool,
     dmaMode: u8,
-    divisor: Divisor,
+    divisor: u16,
 };
 
 pub const VTable = struct {

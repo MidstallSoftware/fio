@@ -39,7 +39,7 @@ pub fn init(options: Base.Options) Base.Error!void {
     );
 
     const ptr: *volatile u16 = @ptrFromInt(options.baseAddress);
-    ptr.* = @intFromEnum(options.divisor);
+    ptr.* = options.divisor;
 
     setLcr(
         options.baseAddress,
