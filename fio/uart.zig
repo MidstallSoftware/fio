@@ -4,25 +4,24 @@ pub const Base = @import("uart/base.zig");
 pub const devices = @import("uart/devices.zig");
 pub const Device = std.meta.DeclEnum(devices);
 
-pub fn vTable(kind: Device) Base.VTable {
-    inline for (comptime std.meta.fields(Device)) |field| {
-        const e: Device = @enumFromInt(field.value);
-        if (e == kind) {
-            const d = @field(devices, field.name);
-            return .{
-                .init = d.init,
-                .write = d.write,
-                .read = d.read,
-            };
-        }
+const vtables = blk: {
+    var list: [std.meta.fields(Device).len]Base.VTable = undefined;
+    for (std.meta.fields(Device)) |field| {
+        const impl = @field(devices, field.name);
+        list[field.value] = .{
+            .init = impl.init,
+            .write = impl.write,
+            .read = impl.read,
+        };
     }
-    unreachable;
-}
+    break :blk list;
+};
+
 
 pub fn init(kind: Device, options: Base.Options) !Base {
     var self = Base {
         .baseAddress = options.baseAddress,
-        .vtable = &vTable(kind),
+        .vtable = &vtables[@intFromEnum(kind)],
     };
 
     try self.init(options);
