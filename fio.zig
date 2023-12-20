@@ -38,3 +38,4 @@ pub const IO = union(enum) {
 };
 
 pub const pci = @import("fio/pci.zig");
+pub const uart = @import("fio/uart.zig");
