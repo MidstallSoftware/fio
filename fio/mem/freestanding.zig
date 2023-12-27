@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub fn read(comptime T: type, alloc: std.mem.Allocator, addr: usize) T {
+pub fn read(comptime T: type, addr: usize) T {
     const ptr = @as(@Type(.{
         .Pointer = .{
             .size = .Slice,
@@ -18,10 +18,9 @@ pub fn read(comptime T: type, alloc: std.mem.Allocator, addr: usize) T {
         .Int => std.mem.readInt(T, ptr, builtin.os.cpu.endian()),
         .Float => |f| @bitCast(std.mem.readInt(std.meta.Int(.unsigned, f.bits), ptr, builtin.os.cpu.endian())),
         .Array => |a| blk: {
-            var buf = alloc.alloc(a.child, a.len) catch @panic("OOM");
-            errdefer alloc.free(buf);
-            @memcpy(buf, ptr);
-            break :blk buf[0..a.len];
+            var buf: [a.len]a.child = undefined;
+            @memcpy(std.mem.asBytes(&buf), ptr);
+            break :blk buf;
         },
         else => @compileError("Incompatible type: " ++ @typeName(T)),
     };

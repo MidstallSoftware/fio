@@ -1,4 +1,5 @@
 const std = @import("std");
+const fio = @import("../fio.zig");
 const Self = @This();
 
 const File = extern struct {
@@ -83,29 +84,23 @@ pub fn init(baseAddress: usize) !Self {
         .baseAddress = baseAddress,
     };
 
-    const data: *volatile u64 = @ptrFromInt(self.baseAddress);
-    const selector: *volatile u16 = @ptrFromInt(self.baseAddress + 8);
-    const dmaAddress: *volatile u64 = @ptrFromInt(self.baseAddress + 16);
+    fio.mem.write(self.baseAddress + 8, std.mem.nativeTo(u16, 0, .big));
+    if (@as(u32, @truncate(fio.mem.read(u64, self.baseAddress))) != 0x554D4551) return error.InvalidId;
 
-    selector.* = std.mem.nativeTo(u16, 0, .big);
-    if (@as(u32, @truncate(data.*)) != 0x554D4551) return error.InvalidId;
-
-    selector.* = std.mem.nativeTo(u16, 1, .big);
-    if (@as(u32, @truncate(data.*)) == 0) return error.DmaFailure;
-    if (std.mem.toNative(u64, dmaAddress.*, .big) != 0x51454d5520434647) return error.DmaFailure;
+    fio.mem.write(self.baseAddress + 8, std.mem.nativeTo(u16, 1, .big));
+    if (@as(u32, @truncate(fio.mem.read(u64, self.baseAddress))) == 0) return error.DmaFailure;
+    if (std.mem.toNative(u64, fio.mem.read(u64, self.baseAddress + 16), .big) != 0x51454d5520434647) return error.DmaFailure;
     return self;
 }
 
 pub fn dma(self: *const Self, buf: []u8, ctrl: u32) !void {
-    const dmaAddress: *volatile u64 = @ptrFromInt(self.baseAddress + 16);
-
     var access = DmaAccess{
         .ctrl = std.mem.nativeTo(u32, ctrl, .big),
         .len = std.mem.nativeTo(u32, @intCast(buf.len), .big),
         .addr = std.mem.nativeTo(u64, @intFromPtr(buf.ptr), .big),
     };
 
-    dmaAddress.* = std.mem.nativeTo(u64, @intFromPtr(&access), .big);
+    fio.mem.write(self.baseAddress + 16, std.mem.nativeTo(u64, @intFromPtr(&access), .big));
     asm volatile ("" ::: "memory");
 
     while (true) {

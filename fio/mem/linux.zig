@@ -11,7 +11,7 @@ fn init() void {
     }
 }
 
-pub fn read(comptime T: type, alloc: std.mem.Allocator, addr: usize) T {
+pub fn read(comptime T: type, addr: usize) T {
     init();
     return switch (@typeInfo(T)) {
         .Int => |i| blk: {
@@ -25,10 +25,9 @@ pub fn read(comptime T: type, alloc: std.mem.Allocator, addr: usize) T {
             break :blk @bitCast(std.mem.readInt(u64, buf, builtin.os.cpu.endian()));
         },
         .Array => |a| blk: {
-            const buf = alloc.alloc(a.child, a.len) catch @panic("OOM");
-            errdefer alloc.free(buf);
-            _ = fd.?.pread(buf, addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
-            break :blk buf[0..a.len];
+            var buf: [a.len]a.type = undefined;
+            _ = fd.?.pread(std.mem.asBytes(&buf), addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
+            break :blk buf;
         },
         else => @compileError("Incompatible type: " ++ @typeName(T)),
     };
@@ -48,7 +47,7 @@ pub fn write(addr: usize, data: anytype) void {
             _ = fd.?.pwrite(buf, addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
         },
         .Array => {
-            _ = fd.?.pwrite(@ptrCast(data), addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
+            _ = fd.?.pwrite(std.mem.asBytes(data), addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
         },
         else => @compileError("Incompatible type: " ++ @typeName(@TypeOf(data))),
     }
