@@ -180,10 +180,11 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(BarMem64Entry) {
 
             size = ~size +% 1;
 
-            if (is64) size &= (1 << 32) - 1;
+            if (!is64) size &= (1 << 32) - 1;
             if (size == 0) continue;
 
             const base = if (is64) &base64 else &base32;
+
             base.* += size - 1;
             base.* &= ~(size - 1);
 
@@ -198,6 +199,29 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(BarMem64Entry) {
                     .addr = base.*,
                 },
             });
+
+            self.base.write(.{
+                .bus = dev.bus,
+                .dev = dev.dev,
+                .func = dev.func,
+                .reg = 0x10 + i * 4,
+            }, @as(u32, @truncate(base.*)) | bits);
+
+            if (is64) {
+            self.base.write(.{
+                .bus = dev.bus,
+                .dev = dev.dev,
+                .func = dev.func,
+                .reg = 0x10 + (i + 1) * 4,
+            }, @as(u32, @truncate(base.* >> 32)));
+            }
+
+            self.base.write(.{
+                .bus = dev.bus,
+                .dev = dev.dev,
+                .func = dev.func,
+                .reg = 4,
+            }, @as(u16, 1 << 1));
 
             base.* += size;
             i += @intFromBool(is64);
