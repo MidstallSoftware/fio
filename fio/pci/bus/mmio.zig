@@ -29,6 +29,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
             .ptr = self,
             .vtable = &.{
                 .read = read,
+                .write = write,
                 .enumerate = enumerate,
                 .deinit = deinit,
             },
@@ -37,10 +38,41 @@ pub fn create(options: Options) Allocator.Error!*Base {
     return &self.base;
 }
 
+fn mmioAddress(self: *Mmio, addr: types.Address) usize {
+    return self.baseAddress + (@as(usize, addr.dev) << 15 | @as(usize, addr.func) << 12 | @as(usize, addr.reg));
+}
+
 fn read(ctx: *anyopaque, addr: types.Address) u32 {
     const self: *Mmio = @ptrCast(@alignCast(ctx));
 
-    return fio.mem.read(u32, self.baseAddress + (@as(u64, addr.dev) << 15 | @as(u64, addr.func) << 12 | @as(u64, addr.reg)));
+    const reg: types.Register = @enumFromInt(addr.reg);
+
+    const shift = switch (reg.width()) {
+        8 => @as(u5, @intCast(addr.reg & 0x3)) * 8,
+        16 => @as(u5, @intCast(addr.reg & 0x2)) * 8,
+        32 => 0,
+        else => @panic("Invalid width"),
+    };
+
+    return (switch (reg.width()) {
+        8 => fio.mem.read(u8, self.mmioAddress(addr)),
+        16 => fio.mem.read(u16, self.mmioAddress(addr)),
+        32 => fio.mem.read(u32, self.mmioAddress(addr)),
+        else => @panic("Invalid width"),
+    }) << shift;
+}
+
+fn write(ctx: *anyopaque, addr: types.Address, value: u32) void {
+    const self: *Mmio = @ptrCast(@alignCast(ctx));
+
+    const reg: types.Register = @enumFromInt(addr.reg);
+
+    return switch (reg.width()) {
+        8 => fio.mem.write(self.mmioAddress(addr), @as(u8, @intCast(value))),
+        16 => fio.mem.write(self.mmioAddress(addr), @as(u16, @intCast(value))),
+        32 => fio.mem.write(self.mmioAddress(addr), value),
+        else => @panic("Invalid width"),
+    };
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {

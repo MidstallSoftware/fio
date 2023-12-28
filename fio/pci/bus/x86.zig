@@ -29,6 +29,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
             .ptr = self,
             .vtable = &.{
                 .read = read,
+                .write = write,
                 .enumerate = enumerate,
                 .deinit = deinit,
             },
@@ -56,6 +57,20 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         32 => port.in(u32, self.data),
         else => @panic("Invalid width"),
     }) << shift;
+}
+
+fn write(ctx: *anyopaque, addr: types.Address, value: u32) u32 {
+    const self: *x86 = @ptrCast(@alignCast(ctx));
+
+    const reg: types.Register = @enumFromInt(addr.reg);
+
+    port.out(self.addr, @as(u32, @bitCast(addr)) & 0xFFFFFFFC);
+    return switch (reg.width()) {
+        8 => port.out(self.data, @as(u8, @intCast(value))),
+        16 => port.out(self.data, @as(u16, @intCast(value))),
+        32 => port.out(self.data, value),
+        else => @panic("Invalid width"),
+    };
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {

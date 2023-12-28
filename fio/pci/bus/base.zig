@@ -5,6 +5,7 @@ const Self = @This();
 
 pub const VTable = struct {
     read: *const fn (*anyopaque, types.Address) u32,
+    write: *const fn (*anyopaque, types.Address, u32) void,
     enumerate: *const fn (*anyopaque) anyerror!std.ArrayList(Device),
     deinit: ?*const fn (*anyopaque) void,
 };
@@ -14,6 +15,10 @@ ptr: *anyopaque,
 
 pub inline fn read(self: *Self, addr: types.Address) u32 {
     return self.vtable.read(self.ptr, addr);
+}
+
+pub inline fn write(self: *Self, addr: types.Address, value: u32) void {
+    return self.vtable.write(self.ptr, addr, value);
 }
 
 pub inline fn enumerate(self: *Self) anyerror!std.ArrayList(Device) {

@@ -26,6 +26,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
             .ptr = self,
             .vtable = &.{
                 .read = read,
+                .write = write,
                 .enumerate = enumerate,
                 .deinit = deinit,
             },
@@ -73,6 +74,14 @@ fn read(ctx: *anyopaque, addr: types.Address) u32 {
         32 => std.mem.readInt(u32, buf[addr.reg..][0..4], builtin.cpu.arch.endian()),
         else => @panic("Invalid width"),
     }) << shift;
+}
+
+fn write(ctx: *anyopaque, addr: types.Address, value: u32) void {
+    _ = ctx;
+    _ = addr;
+    _ = value;
+    // TODO: implement this
+    @panic("Not implemented");
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
