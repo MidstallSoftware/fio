@@ -24,6 +24,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
         .domain = options.domain,
         .base = .{
             .ptr = self,
+            .type = @typeName(Sysfs),
             .vtable = &.{
                 .read = read,
                 .write = write,

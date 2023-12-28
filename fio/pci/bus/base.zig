@@ -12,6 +12,7 @@ pub const VTable = struct {
 
 vtable: *const VTable,
 ptr: *anyopaque,
+type: []const u8,
 
 pub inline fn read(self: *Self, addr: types.Address) u32 {
     return self.vtable.read(self.ptr, addr);

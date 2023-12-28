@@ -27,6 +27,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
         .size = options.size,
         .base = .{
             .ptr = self,
+            .type = @typeName(Mmio),
             .vtable = &.{
                 .read = read,
                 .write = write,
