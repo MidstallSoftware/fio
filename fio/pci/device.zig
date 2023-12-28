@@ -30,9 +30,20 @@ pub fn read(self: Self, comptime reg: types.Register) reg.type() {
     return @as(reg.type(), @truncate(res >> shift));
 }
 
+pub inline fn readBar(self: Self, i: u8) ?types.Bar {
+    return self.base.readBar(self.bus, self.dev, self.func, @intCast(i));
+}
+
 pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     _ = fmt;
     _ = options;
+
+    const headerType = self.read(.headerType);
+    const numBars: u8 = switch (headerType & 0x7F) {
+        0 => 6,
+        1 => 2,
+        else => 0,
+    };
 
     try writer.print("{s} {{ .address = {{ .bus = {}, .dev = {}, .func = {} }}", .{
         @typeName(Self),
@@ -43,13 +54,15 @@ pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptio
 
     inline for (@typeInfo(types.Register).Enum.fields) |f| {
         const value = self.read(@enumFromInt(f.value));
-        try writer.print(", .{s} = ", .{ f.name });
+        try writer.print(", .{s} = ", .{f.name});
 
-        if (std.mem.startsWith(u8, f.name, "bar")) {
-            try writer.print("{}", .{ types.Bar.decode(value) });
-        } else {
-            try writer.print("0x{x}", .{ value });
+        if (!std.mem.startsWith(u8, f.name, "bar")) {
+            try writer.print("0x{x}", .{value});
         }
+    }
+
+    for (0..numBars) |i| {
+        try writer.print(", .bar{} = {?}", .{ i, self.readBar(@intCast(i)) });
     }
 
     try writer.writeAll(" }");

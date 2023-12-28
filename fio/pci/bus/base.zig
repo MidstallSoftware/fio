@@ -6,8 +6,9 @@ const Self = @This();
 pub const VTable = struct {
     read: *const fn (*anyopaque, types.Address) u32,
     write: *const fn (*anyopaque, types.Address, u32) void,
+    readBar: ?*const fn (*anyopaque, u8, u5, u3, u8) ?types.Bar = null,
     enumerate: *const fn (*anyopaque) anyerror!std.ArrayList(Device),
-    deinit: ?*const fn (*anyopaque) void,
+    deinit: ?*const fn (*anyopaque) void = null,
 };
 
 vtable: *const VTable,
@@ -20,6 +21,17 @@ pub inline fn read(self: *Self, addr: types.Address) u32 {
 
 pub inline fn write(self: *Self, addr: types.Address, value: u32) void {
     return self.vtable.write(self.ptr, addr, value);
+}
+
+pub fn readBar(self: *Self, bus: u8, dev: u5, func: u3, i: u8) ?types.Bar {
+    if (self.vtable.readBar) |f| return f(self.ptr, bus, dev, func, i);
+
+    return .{ .@"32" = types.Bar32.decode(self.read(.{
+        .bus = bus,
+        .dev = dev,
+        .func = func,
+        .reg = 0x10 + i * 4,
+    })) };
 }
 
 pub inline fn enumerate(self: *Self) anyerror!std.ArrayList(Device) {

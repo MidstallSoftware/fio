@@ -82,7 +82,6 @@ fn write(ctx: *anyopaque, addr: types.Address, value: u32) void {
     _ = addr;
     _ = value;
     // TODO: implement this
-    @panic("Not implemented");
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {

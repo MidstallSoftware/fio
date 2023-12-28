@@ -56,19 +56,34 @@ pub const Register = enum(u8) {
     }
 };
 
-pub const BarMem = packed struct { always0: u1, type: u1, prefetch: u1, address: u29 };
+pub const Bar32 = union(enum) {
+    mem: BarMem32,
+    io: BarIo32,
 
-pub const BarIo = packed struct {
-    always1: u1,
-    reserved: u1,
-    address: u30,
+    pub const BarMem32 = packed struct { always0: u1, type: u1, prefetch: u1, addr: u29 };
+
+    pub const BarIo32 = packed struct {
+        always1: u1,
+        reserved: u1,
+        address: u30,
+    };
+
+    pub fn decode(v: u32) Bar32 {
+        return if (v & 0x1 != 0) .{ .io = @bitCast(v) } else .{ .mem = @bitCast(v) };
+    }
+};
+
+pub const Bar64 = union(enum) {
+    mem: BarMem64,
+
+    pub const BarMem64 = struct {
+        bits: u32,
+        size: u64,
+        addr: u64,
+    };
 };
 
 pub const Bar = union(enum) {
-    mem: BarMem,
-    io: BarIo,
-
-    pub fn decode(v: u32) Bar {
-        return if (v & 0x1 != 0) .{ .io = @bitCast(v) } else .{ .mem = @bitCast(v) };
-    }
+    @"32": Bar32,
+    @"64": Bar64,
 };
