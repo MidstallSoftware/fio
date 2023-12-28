@@ -8,6 +8,6 @@ pub fn read(comptime T: type, addr: usize) T {
 
 pub fn write(addr: usize, data: anytype) void {
     const T = @TypeOf(data);
-    const ptr: *const volatile T = @ptrFromInt(addr);
+    const ptr: *volatile T = @ptrFromInt(addr);
     ptr.* = data;
 }
