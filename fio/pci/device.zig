@@ -53,10 +53,9 @@ pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptio
     });
 
     inline for (@typeInfo(types.Register).Enum.fields) |f| {
-        const value = self.read(@enumFromInt(f.value));
-        try writer.print(", .{s} = ", .{f.name});
-
         if (!std.mem.startsWith(u8, f.name, "bar")) {
+            const value = self.read(@enumFromInt(f.value));
+            try writer.print(", .{s} = ", .{f.name});
             try writer.print("0x{x}", .{value});
         }
     }

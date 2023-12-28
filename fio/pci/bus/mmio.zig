@@ -11,7 +11,7 @@ const BarMem64Entry = struct {
     dev: u5,
     func: u3,
     i: u8,
-    value: types.BarMem64,
+    value: types.Bar64.BarMem64,
 };
 
 pub const Options = struct {
@@ -94,7 +94,7 @@ fn write(ctx: *anyopaque, addr: types.Address, value: u32) void {
 fn readBar(ctx: *anyopaque, bus: u8, dev: u5, func: u3, i: u8) ?types.Bar {
     const self: *Mmio = @ptrCast(@alignCast(ctx));
 
-    const bits = self.base.read(u32, .{
+    const bits = self.base.read(.{
         .bus = bus,
         .dev = dev,
         .func = func,
@@ -116,7 +116,7 @@ fn readBar(ctx: *anyopaque, bus: u8, dev: u5, func: u3, i: u8) ?types.Bar {
     return null;
 }
 
-fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
+fn enumerateBar(self: *Mmio) !std.ArrayList(BarMem64Entry) {
     const devices = try self.base.enumerate();
     defer devices.deinit();
 
@@ -126,7 +126,7 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
     var base32 = self.base32;
     var base64 = self.base64;
 
-    for (list.items) |dev| {
+    for (devices.items) |dev| {
         const headerType = dev.read(.headerType);
         const numBars: u8 = switch (headerType & 0x7F) {
             0 => 6,
@@ -136,7 +136,7 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
 
         var i: u8 = 0;
         while (i < numBars) : (i += 1) {
-            const bits = self.base.read(u32, .{
+            const bits = self.base.read(.{
                 .bus = dev.bus,
                 .dev = dev.dev,
                 .func = dev.func,
@@ -150,17 +150,14 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
                 .reg = 0x10 + (i * 4),
             }, @as(u32, 0xFFFFFFFF));
 
-            const value = self.base.read(u32, .{
+            const value = self.base.read(.{
                 .bus = dev.bus,
                 .dev = dev.dev,
                 .func = dev.func,
                 .reg = 0x10 + (i * 4),
             });
 
-            if (bits & 1 != 0) {
-                try list.append(null);
-                continue;
-            }
+            if (bits & 1 != 0) continue;
 
             const is64 = ((value & 0b110) >> 1) == 2;
 
@@ -173,7 +170,7 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
                     .reg = 0x10 + ((i + 1) * 4),
                 }, @as(u32, 0xFFFFFFFF));
 
-                size |= @as(u64, self.base.read(u32, .{
+                size |= @as(u64, self.base.read(.{
                     .bus = dev.bus,
                     .dev = dev.dev,
                     .func = dev.func,
@@ -184,9 +181,7 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(?BarMem64Entry) {
             size = ~size +% 1;
 
             if (is64) size &= (1 << 32) - 1;
-            if (size == 0) {
-                try list.append(null);
-            }
+            if (size == 0) continue;
 
             const base = if (is64) &base64 else &base32;
             base.* += size - 1;
