@@ -81,29 +81,25 @@ fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
     var devices = std.ArrayList(Device).init(self.allocator);
     errdefer devices.deinit();
 
-    var _bus: u32 = 0;
-    while (_bus < 8) : (_bus += 1) {
-        const bus: u8 = @intCast(_bus);
-        var _dev: u32 = 0;
-        while (_dev < 32) : (_dev += 1) {
-            const dev: u5 = @intCast(_dev);
+    var _dev: u32 = 0;
+    while (_dev < 32) : (_dev += 1) {
+        const dev: u5 = @intCast(_dev);
 
-            var entry = Device{
-                .base = &self.base,
-                .bus = bus,
-                .dev = dev,
-                .func = 0,
-            };
+        var entry = Device{
+            .base = &self.base,
+            .bus = 0,
+            .dev = dev,
+            .func = 0,
+        };
 
-            const nfuncs: u32 = if (entry.read(.headerType) & 0x80 != 0) 8 else 1;
-            var _func: u32 = 0;
-            while (_func < nfuncs) : (_func += 1) {
-                const func: u3 = @intCast(_func);
+        const nfuncs: u32 = if (entry.read(.headerType) & 0x80 != 0) 8 else 1;
+        var _func: u32 = 0;
+        while (_func < nfuncs) : (_func += 1) {
+            const func: u3 = @intCast(_func);
 
-                entry.func = func;
-                if (entry.read(.vendor) == 0xffff) continue;
-                try devices.append(entry);
-            }
+            entry.func = func;
+            if (entry.read(.vendor) == 0xffff) continue;
+            try devices.append(entry);
         }
     }
     return devices;
