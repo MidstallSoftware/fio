@@ -40,7 +40,7 @@ pub fn create(options: Options) Allocator.Error!*Base {
 fn read(ctx: *anyopaque, addr: types.Address) u32 {
     const self: *Mmio = @ptrCast(@alignCast(ctx));
 
-    return fio.mem.read(u32, self.baseAddress + (@as(u64, addr.dev) << 15 | @as(u64, addr.func) << 12 | @as(u64, self.reg)));
+    return fio.mem.read(u32, self.baseAddress + (@as(u64, addr.dev) << 15 | @as(u64, addr.func) << 12 | @as(u64, addr.reg)));
 }
 
 fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
