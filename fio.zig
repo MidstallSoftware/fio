@@ -39,4 +39,5 @@ pub const IO = union(enum) {
 
 pub const FwCfg = @import("fio/fw-cfg.zig");
 pub const pci = @import("fio/pci.zig");
+pub const rtc = @import("fio/rtc.zig");
 pub const uart = @import("fio/uart.zig");

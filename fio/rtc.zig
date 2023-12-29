@@ -1,7 +1,7 @@
 const std = @import("std");
 
-pub const Base = @import("uart/base.zig");
-pub const devices = @import("uart/devices.zig");
+pub const Base = @import("rtc/base.zig");
+pub const devices = @import("rtc/devices.zig");
 pub const Device = std.meta.DeclEnum(devices);
 
 const vtables = blk: {
@@ -9,20 +9,16 @@ const vtables = blk: {
     for (std.meta.fields(Device)) |field| {
         const impl = @field(devices, field.name);
         list[field.value] = .{
-            .init = impl.init,
-            .write = impl.write,
-            .read = impl.read,
+            .readTime = impl.readTime,
+            .setTime = impl.setTime,
         };
     }
     break :blk list;
 };
 
-pub fn init(kind: Device, options: Base.Options) !Base {
-    var self = Base {
+pub fn init(kind: Device, options: Base.Options) Base {
+    return .{
         .baseAddress = options.baseAddress,
         .vtable = &vtables[@intFromEnum(kind)],
     };
-
-    try self.init(options);
-    return self;
 }
