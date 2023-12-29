@@ -7,8 +7,19 @@ pub fn build(b: *std.Build) void {
     const no_tests = b.option(bool, "no-tests", "skip building tests") orelse false;
     const no_docs = b.option(bool, "no-docs", "skip installing documentation") orelse false;
 
+    const dtree = b.dependency("dtree", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const fio = b.addModule("fio", .{
         .source_file = .{ .path = b.pathFromRoot("fio.zig") },
+        .dependencies = &.{
+            .{
+                .name = "dtree",
+                .module = dtree.module("dtree"),
+            },
+        },
     });
 
     if (!no_tests) {
@@ -21,6 +32,8 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
         });
+
+        unit_tests.addModule("dtree", dtree.module("dtree"));
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         step_test.dependOn(&run_unit_tests.step);
