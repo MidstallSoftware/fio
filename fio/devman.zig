@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const dtree = @import("dtree");
-const Nvme = @import("nvme.zig");
+const nvme = @import("nvme.zig");
 const pci = @import("pci.zig");
 const rtc = @import("rtc.zig");
 const uart = @import("uart.zig");
@@ -12,7 +12,7 @@ pub const Device = union(enum) {
     pci: pci.Device,
     rtc: rtc.Base,
     uart: uart.Base,
-    nvme: Nvme,
+    nvme: nvme.Device,
 };
 
 pub const Bus = union(enum) {
@@ -32,7 +32,9 @@ pub const Bus = union(enum) {
                         list.appendAssumeCapacity(.{
                             .dev = .{
                                 .nvme = .{
-                                    .baseAddress = d.readBar(0).?.@"64".mem.addr,
+                                    .mmio = .{
+                                        .device = d,
+                                    },
                                 },
                             },
                         });
