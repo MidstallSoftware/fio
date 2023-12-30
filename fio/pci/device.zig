@@ -8,7 +8,7 @@ bus: u8,
 dev: u5,
 func: u3,
 
-pub fn address(self: Self, comptime reg: types.Register) types.Address {
+pub fn address(self: Self, reg: types.Register) types.Address {
     return .{
         .bus = self.bus,
         .dev = self.dev,
