@@ -16,6 +16,29 @@ pub const Device = union(enum) {
 pub const Bus = union(enum) {
     pci: *pci.bus.Base,
 
+    pub fn enumerate(self: Bus) !std.ArrayList(Entry) {
+        return switch (self) {
+            .pci => |p| blk: {
+                const devs = try p.enumerate();
+                defer devs.deinit();
+
+                var list = try std.ArrayList(Entry).initCapacity(devs.allocator, devs.items.len);
+                errdefer list.deinit();
+
+                for (devs.items) |d| {
+                    // TODO: try and figure out what the PCI device is.
+                    list.appendAssumeCapacity(.{
+                        .dev = .{
+                            .pci = d,
+                        },
+                    });
+                }
+
+                break :blk list;
+            },
+        };
+    }
+
     pub fn deinit(self: Bus) void {
         return switch (self) {
             .pci => |p| p.deinit(),
@@ -23,9 +46,16 @@ pub const Bus = union(enum) {
     }
 };
 
-pub const Enumerated = union(enum) {
+pub const Entry = union(enum) {
     bus: Bus,
     dev: Device,
+
+    pub fn deinit(self: Entry) void {
+        return switch (self) {
+            .bus => |bus| bus.deinit(),
+            .dev => {},
+        };
+    }
 };
 
 pub const Options = struct {
@@ -51,9 +81,12 @@ pub fn deinit(self: *const Self) void {
     self.allocator.destroy(self);
 }
 
-pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Enumerated) {
-    var list = std.ArrayList(Enumerated).init(self.allocator);
-    errdefer list.deinit();
+pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Entry) {
+    var list = std.ArrayList(Entry).init(self.allocator);
+    errdefer {
+        for (list.items) |e| e.deinit();
+        list.deinit();
+    }
 
     if (self.dtb) |dtb| {
         if (@as(?[]const u8, comptime switch (builtin.cpu.arch) {
@@ -63,15 +96,30 @@ pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Enumerated) {
         })) |pciNodeName| {
             if (dtb.findLoose(&.{ "", "soc", pciNodeName, "reg" }) catch null) |pciBlob| {
                 const pciBarBlob = try dtb.findLoose(&.{ "", "soc", pciNodeName, "ranges" });
+                if (pciBarBlob.len == 84) {
+                    try list.append(.{
+                        .bus = .{
+                            .pci = try pci.bus.Mmio.create(.{
+                                .allocator = self.allocator,
+                                .baseAddress = std.mem.readInt(u64, pciBlob[0..8], .big),
+                                .size = std.mem.readInt(u64, pciBlob[8..16], .big),
+                                .base32 = std.mem.readInt(u64, pciBarBlob[0x28..][0..8], .big),
+                                .base64 = std.mem.readInt(u64, pciBarBlob[0x3C..][0..8], .big),
+                            }),
+                        },
+                    });
+                }
+            }
+        }
+
+        if (dtb.findLoose(&.{ "", "soc", "serial@", "compatible" }) catch null) |serialKind| {
+            if (std.meta.stringToEnum(uart.Device, serialKind)) |serialDevice| {
                 try list.append(.{
-                    .bus = .{
-                        .pci = try pci.bus.Mmio.create(.{
-                            .allocator = self.allocator,
-                            .baseAddress = std.mem.readInt(u64, pciBlob[0..8], .big),
-                            .size = std.mem.readInt(u64, pciBlob[8..16], .big),
-                            .base32 = std.mem.readInt(u64, pciBarBlob[0x28..][0..8], .big),
-                            .base64 = std.mem.readInt(u64, pciBarBlob[0x3C..][0..8], .big),
-                        }),
+                    .dev = .{
+                        .uart = .{
+                            .baseAddress = std.mem.readInt(u64, (try dtb.findLoose(&.{ "", "soc", "serial@", "reg" }))[0..8], .big),
+                            .vtable = &uart.vtables[@intFromEnum(serialDevice)],
+                        },
                     },
                 });
             }
@@ -87,6 +135,14 @@ pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Enumerated) {
                     },
                 });
             }
+        }
+    }
+
+    for (list.items) |e| {
+        if (e == .bus) {
+            const sublist = try e.bus.enumerate();
+            defer sublist.deinit();
+            try list.appendSlice(sublist.items);
         }
     }
     return list;
