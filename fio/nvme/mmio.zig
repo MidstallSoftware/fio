@@ -37,6 +37,14 @@ pub fn init(self: *Self, queueSize: u12) !void {
     var cfg = self.getControllerConfig();
     cfg.enable = 1;
 
+    for (cap.pageSizeMin..cap.pageSizeMin) |x| {
+        const pgSize = try std.math.powi(usize, 2, x + @as(usize, 12));
+        if (pgSize == std.mem.page_size) {
+            cfg.memoryPageSize = @intCast(x);
+            break;
+        }
+    }
+
     if (cap.commandSetSupported & (1 << 7) != 0) {
         cfg.ioCommandSetSel = 0b111;
     } else if (cap.commandSetSupported & (1 << 6) != 0) {
@@ -47,16 +55,18 @@ pub fn init(self: *Self, queueSize: u12) !void {
 
     self.setControllerConfig(cfg);
 
-    while (self.controllerStatus().ready != 0) {}
+    while (self.controllerStatus().ready != 1) {}
 }
 
 pub fn deinit(self: *Self) void {
-    if (self.completionQueue.len > 0) self.allocator.free(self.completionQueue);
-    if (self.submissionQueue.len > 0) self.allocator.free(self.submissionQueue);
-
     var cfg = self.getControllerConfig();
     cfg.enable = 0;
     self.setControllerConfig(cfg);
+
+    while (self.controllerStatus().shutdownStatus != 0) {}
+
+    if (self.completionQueue.len > 0) self.allocator.free(self.completionQueue);
+    if (self.submissionQueue.len > 0) self.allocator.free(self.submissionQueue);
 }
 
 pub fn baseAddress(self: *const Self) usize {
