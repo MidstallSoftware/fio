@@ -9,8 +9,8 @@ const Self = @This();
 
 pub const Device = union(enum) {
     pci: pci.Device,
-    rtc: rtc,
-    uart: uart,
+    rtc: rtc.Base,
+    uart: uart.Base,
 };
 
 pub const Bus = union(enum) {
@@ -71,6 +71,18 @@ pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Enumerated) {
                             .size = std.mem.readInt(u64, pciBlob[8..16], .big),
                             .base32 = std.mem.readInt(u64, pciBarBlob[0x28..][0..8], .big),
                             .base64 = std.mem.readInt(u64, pciBarBlob[0x3C..][0..8], .big),
+                        }),
+                    },
+                });
+            }
+        }
+
+        if (dtb.findLoose(&.{ "", "soc", "rtc@", "compatible" }) catch null) |rtcKind| {
+            if (std.mem.eql(u8, rtcKind[0..(rtcKind.len - 1)], "google,goldfish-rtc")) {
+                try list.append(.{
+                    .dev = .{
+                        .rtc = rtc.init(.goldfish, .{
+                            .baseAddress = std.mem.readInt(u64, (try dtb.findLoose(&.{ "", "soc", "rtc@", "reg" }))[0..8], .big),
                         }),
                     },
                 });
