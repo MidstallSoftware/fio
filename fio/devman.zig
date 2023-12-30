@@ -13,6 +13,13 @@ pub const Device = union(enum) {
     rtc: rtc.Base,
     uart: uart.Base,
     nvme: nvme.Device,
+
+    pub fn deinit(self: Device) void {
+        return switch (self) {
+            .nvme => |n| n.deinit(),
+            else => {},
+        };
+    }
 };
 
 pub const Bus = union(enum) {
@@ -33,6 +40,7 @@ pub const Bus = union(enum) {
                             .dev = .{
                                 .nvme = .{
                                     .mmio = .{
+                                        .allocator = list.allocator,
                                         .device = d,
                                     },
                                 },
