@@ -57,12 +57,12 @@ pub const Register = enum(u8) {
 };
 
 pub const Bar32 = union(enum) {
-    mem: BarMem32,
-    io: BarIo32,
+    mem: Mem,
+    io: Io,
 
-    pub const BarMem32 = packed struct { always0: u1, type: u1, prefetch: u1, addr: u29 };
+    pub const Mem = packed struct { always0: u1, type: u1, prefetch: u1, addr: u29 };
 
-    pub const BarIo32 = packed struct {
+    pub const Io = packed struct {
         always1: u1,
         reserved: u1,
         address: u30,
@@ -74,9 +74,9 @@ pub const Bar32 = union(enum) {
 };
 
 pub const Bar64 = union(enum) {
-    mem: BarMem64,
+    mem: Mem,
 
-    pub const BarMem64 = struct {
+    pub const Mem = struct {
         bits: u32,
         size: u64,
         addr: u64,
@@ -86,4 +86,19 @@ pub const Bar64 = union(enum) {
 pub const Bar = union(enum) {
     @"32": Bar32,
     @"64": Bar64,
+};
+
+pub const Command = packed struct(u16) {
+    io: u1,
+    mem: u1,
+    master: u1,
+    cycles: u1,
+    memWrite: u1,
+    vga: u1,
+    parityError: u1,
+    reserved: u1,
+    serr: u1,
+    fast: u1,
+    interrupt: u1,
+    reserved2: u5,
 };

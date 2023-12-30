@@ -11,7 +11,7 @@ const BarMem64Entry = struct {
     dev: u5,
     func: u3,
     i: u8,
-    value: types.Bar64.BarMem64,
+    value: types.Bar64.Mem,
 };
 
 pub const Options = struct {
@@ -208,12 +208,12 @@ fn enumerateBar(self: *Mmio) !std.ArrayList(BarMem64Entry) {
             }, @as(u32, @truncate(base.*)) | bits);
 
             if (is64) {
-            self.base.write(.{
-                .bus = dev.bus,
-                .dev = dev.dev,
-                .func = dev.func,
-                .reg = 0x10 + (i + 1) * 4,
-            }, @as(u32, @truncate(base.* >> 32)));
+                self.base.write(.{
+                    .bus = dev.bus,
+                    .dev = dev.dev,
+                    .func = dev.func,
+                    .reg = 0x10 + (i + 1) * 4,
+                }, @as(u32, @truncate(base.* >> 32)));
             }
 
             self.base.write(.{

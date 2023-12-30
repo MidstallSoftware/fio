@@ -2,6 +2,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const dtree = @import("dtree");
+const Nvme = @import("nvme.zig");
 const pci = @import("pci.zig");
 const rtc = @import("rtc.zig");
 const uart = @import("uart.zig");
@@ -11,6 +12,7 @@ pub const Device = union(enum) {
     pci: pci.Device,
     rtc: rtc.Base,
     uart: uart.Base,
+    nvme: Nvme,
 };
 
 pub const Bus = union(enum) {
@@ -26,12 +28,19 @@ pub const Bus = union(enum) {
                 errdefer list.deinit();
 
                 for (devs.items) |d| {
-                    // TODO: try and figure out what the PCI device is.
-                    list.appendAssumeCapacity(.{
-                        .dev = .{
-                            .pci = d,
-                        },
-                    });
+                    if (d.read(.class) == 1 and d.read(.subclass) == 8) {
+                        list.appendAssumeCapacity(.{
+                            .dev = .{
+                                .nvme = Nvme.init(d),
+                            },
+                        });
+                    } else {
+                        list.appendAssumeCapacity(.{
+                            .dev = .{
+                                .pci = d,
+                            },
+                        });
+                    }
                 }
 
                 break :blk list;

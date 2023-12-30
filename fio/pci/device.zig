@@ -34,6 +34,11 @@ pub inline fn readBar(self: Self, i: u8) ?types.Bar {
     return self.base.readBar(self.bus, self.dev, self.func, @intCast(i));
 }
 
+pub fn write(self: Self, comptime reg: types.Register, value: reg.type()) void {
+    const addr = self.address(reg);
+    self.base.write(addr, value);
+}
+
 pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
     _ = fmt;
     _ = options;
@@ -54,9 +59,15 @@ pub fn format(self: Self, comptime fmt: []const u8, options: std.fmt.FormatOptio
 
     inline for (@typeInfo(types.Register).Enum.fields) |f| {
         if (!std.mem.startsWith(u8, f.name, "bar")) {
-            const value = self.read(@enumFromInt(f.value));
+            const reg: types.Register = @enumFromInt(f.value);
+            const value = self.read(reg);
             try writer.print(", .{s} = ", .{f.name});
-            try writer.print("0x{x}", .{value});
+
+            if (reg == .command) {
+                try writer.print("{}", .{@as(types.Command, @bitCast(value))});
+            } else {
+                try writer.print("0x{x}", .{value});
+            }
         }
     }
 
