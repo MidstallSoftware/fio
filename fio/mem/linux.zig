@@ -15,14 +15,14 @@ pub fn read(comptime T: type, addr: usize) T {
     init();
     return switch (@typeInfo(T)) {
         .Int => |i| blk: {
-            const buf: [@divExact(i.bits, 8)]u8 = undefined;
-            _ = fd.?.pread(buf, addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
-            break :blk std.mem.readInt(T, buf, builtin.os.cpu.endian());
+            var buf: [@divExact(i.bits, 8)]u8 = undefined;
+            _ = fd.?.pread(&buf, addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
+            break :blk std.mem.readInt(T, &buf, builtin.cpu.arch.endian());
         },
         .Float => |f| blk: {
-            const buf: [@divExact(f.bits, 8)]u8 = undefined;
-            _ = fd.?.pread(buf, addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
-            break :blk @bitCast(std.mem.readInt(u64, buf, builtin.os.cpu.endian()));
+            var buf: [@divExact(f.bits, 8)]u8 = undefined;
+            _ = fd.?.pread(&buf, addr) catch |e| std.debug.panic("Failed to read 0x{x}: {s}", .{ addr, @errorName(e) });
+            break :blk @bitCast(std.mem.readInt(u64, buf, builtin.cpu.arch.endian()));
         },
         .Array => |a| blk: {
             var buf: [a.len]a.type = undefined;
@@ -37,14 +37,14 @@ pub fn write(addr: usize, data: anytype) void {
     init();
     switch (@typeInfo(@TypeOf(data))) {
         .Int => |i| {
-            const buf: [@divExact(i.bits, 8)]u8 = undefined;
-            std.mem.writeInt(@TypeOf(data), buf, data, builtin.os.cpu.endian());
-            _ = fd.?.pwrite(buf, addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
+            var buf: [@divExact(i.bits, 8)]u8 = undefined;
+            std.mem.writeInt(@TypeOf(data), &buf, data, builtin.cpu.arch.endian());
+            _ = fd.?.pwrite(&buf, addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
         },
         .Float => |f| {
-            const buf: [@divExact(f.bits, 8)]u8 = undefined;
-            std.mem.writeInt(std.meta.Int(.unsigned, f.bits), buf, @bitCast(data), builtin.os.cpu.endian());
-            _ = fd.?.pwrite(buf, addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
+            var buf: [@divExact(f.bits, 8)]u8 = undefined;
+            std.mem.writeInt(std.meta.Int(.unsigned, f.bits), &buf, @bitCast(data), builtin.cpu.arch.endian());
+            _ = fd.?.pwrite(&buf, addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });
         },
         .Array => {
             _ = fd.?.pwrite(std.mem.asBytes(data), addr) catch |e| std.debug.panic("Failed to write 0x{x}: {s}", .{ addr, @errorName(e) });

@@ -1,13 +1,21 @@
 const std = @import("std");
+const dtree = @import("dtree");
 const fio = @import("fio");
 
-pub fn main() !void {
-    var pci = try fio.pci.bus.Sysfs.create(.{
-        .allocator = std.heap.page_allocator,
-    });
-    defer pci.deinit();
+const alloc = std.heap.page_allocator;
 
-    const devices = try pci.enumerate();
+pub fn main() !void {
+    const devMan = try fio.DeviceManager.create(.{
+        .allocator = alloc,
+        .dtb = blk: {
+            const file = std.fs.openFileAbsolute("/sys/firmware/fdt", .{}) catch break :blk null;
+            defer file.close();
+            break :blk try dtree.Reader.initFile(alloc, file);
+        },
+    });
+    defer devMan.deinit();
+
+    const devices = try devMan.enumerateDeviceTree();
     defer devices.deinit();
 
     for (devices.items) |dev| {

@@ -59,5 +59,6 @@ pub fn build(b: *std.Build) void {
     });
 
     exe_example.addModule("fio", fio);
+    exe_example.addModule("dtree", dtree.module("dtree"));
     b.installArtifact(exe_example);
 }
