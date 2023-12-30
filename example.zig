@@ -15,7 +15,7 @@ pub fn main() !void {
     });
     defer devMan.deinit();
 
-    const devices = try devMan.enumerateDeviceTree();
+    const devices = try devMan.enumerate();
     defer devices.deinit();
 
     for (devices.items) |dev| {

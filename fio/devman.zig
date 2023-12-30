@@ -81,6 +81,41 @@ pub fn deinit(self: *const Self) void {
     self.allocator.destroy(self);
 }
 
+pub fn enumeratePlatform(self: *const Self) !std.ArrayList(Entry) {
+    var list = std.ArrayList(Entry).init(self.allocator);
+    errdefer {
+        for (list.items) |e| e.deinit();
+        list.deinit();
+    }
+
+    if (builtin.os.tag == .linux) {
+        try list.append(.{
+            .bus = .{
+                .pci = try pci.bus.Sysfs.create(.{
+                    .allocator = self.allocator,
+                }),
+            },
+        });
+    } else if (builtin.os.tag == .freestanding and builtin.cpu.arch.isX86()) {
+        try list.append(.{
+            .bus = .{
+                .pci = try pci.bus.x86.create(.{
+                    .allocator = self.allocator,
+                }),
+            },
+        });
+    }
+
+    for (list.items) |e| {
+        if (e == .bus) {
+            const sublist = try e.bus.enumerate();
+            defer sublist.deinit();
+            try list.appendSlice(sublist.items);
+        }
+    }
+    return list;
+}
+
 pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Entry) {
     var list = std.ArrayList(Entry).init(self.allocator);
     errdefer {
@@ -145,5 +180,20 @@ pub fn enumerateDeviceTree(self: *const Self) !std.ArrayList(Entry) {
             try list.appendSlice(sublist.items);
         }
     }
+    return list;
+}
+
+pub fn enumerate(self: *const Self) !std.ArrayList(Entry) {
+    const plat = try self.enumeratePlatform();
+    defer plat.deinit();
+
+    const dt = try self.enumerateDeviceTree();
+    defer dt.deinit();
+
+    var list = std.ArrayList(Entry).init(self.allocator);
+    errdefer list.deinit();
+
+    try list.appendSlice(plat.items);
+    try list.appendSlice(dt.items);
     return list;
 }
