@@ -3,6 +3,12 @@ const fio = @import("../fio.zig");
 const pci = @import("pci.zig");
 const Self = @This();
 
+pub const Version = packed struct(u32) {
+    tertiary: u8,
+    minor: u8,
+    major: u16,
+};
+
 baseAddress: usize,
 
 pub fn init(dev: pci.Device) Self {
@@ -18,8 +24,13 @@ pub fn init(dev: pci.Device) Self {
     return self;
 }
 
-pub fn version(self: *const Self) u32 {
-    return fio.mem.read(u32, self.baseAddress + 0x8);
+pub fn version(self: *const Self) std.SemanticVersion {
+    const value: Version = @bitCast(fio.mem.read(u32, self.baseAddress + 0x8));
+    return .{
+        .major = value.major,
+        .minor = value.minor,
+        .patch = value.tertiary,
+    };
 }
 
 pub fn format(self: *const Self, comptime _: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
