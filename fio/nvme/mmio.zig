@@ -12,10 +12,10 @@ pub const Version = packed struct(u32) {
 pub const Capabilities = packed struct(u64) {
     maxQueueEntries: u16,
     contigQueuesReq: u1,
-    arbitMechSupported: u1,
-    reserved0: u4,
+    arbitMechSupported: u2,
+    reserved0: u5,
     timeout: u8,
-    doorbellStride: u3,
+    doorbellStride: u4,
     subsysResetSupport: u1,
     commandSetSupported: u8,
     bootPartSupported: u1,
@@ -26,7 +26,7 @@ pub const Capabilities = packed struct(u64) {
     memBufferSupported: u1,
     subsysShutdownSupported: u1,
     readyModesSupported: u2,
-    reserved1: u4,
+    reserved1: u3,
 };
 
 pub const ControllerStatus = packed struct(u32) {
