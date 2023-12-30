@@ -9,19 +9,24 @@ pub const Version = packed struct(u32) {
     major: u16,
 };
 
+pub const ControllerStatus = packed struct(u32) {
+    ready: u1,
+    fatalStatus: u1,
+    shutdownStatus: u2,
+    subsysReset: u1,
+    procPaused: u1,
+    shutdownType: u1,
+    reserved: u25,
+};
+
 baseAddress: usize,
 
-pub fn init(dev: pci.Device) Self {
-    const self = Self{
-        .baseAddress = dev.readBar(0).?.@"64".mem.addr,
-    };
+pub fn init(self: *Self) void {
+    while (self.controllerStatus().ready != 0) {}
+}
 
-    var cmd: pci.types.Command = @bitCast(dev.read(.command));
-    cmd.master = 1;
-    cmd.mem = 1;
-    cmd.io = 0;
-    dev.write(.command, @bitCast(cmd));
-    return self;
+pub fn controllerStatus(self: *const Self) ControllerStatus {
+    return @bitCast(fio.mem.read(u32, self.baseAddress + 0x1C));
 }
 
 pub fn version(self: *const Self) std.SemanticVersion {
@@ -37,8 +42,9 @@ pub fn format(self: *const Self, comptime _: []const u8, options: std.fmt.Format
     _ = options;
 
     try writer.writeAll(@typeName(Self));
-    try writer.print("{{ .baseAddress = 0x{x}, .version = {} }}", .{
+    try writer.print("{{ .baseAddress = 0x{x}, .controllerStatus = {}, .version = {} }}", .{
         self.baseAddress,
+        self.controllerStatus(),
         self.version(),
     });
 }

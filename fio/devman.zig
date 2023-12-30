@@ -31,7 +31,9 @@ pub const Bus = union(enum) {
                     if (d.read(.class) == 1 and d.read(.subclass) == 8) {
                         list.appendAssumeCapacity(.{
                             .dev = .{
-                                .nvme = Nvme.init(d),
+                                .nvme = .{
+                                    .baseAddress = d.readBar(0).?.@"64".mem.addr,
+                                },
                             },
                         });
                     } else {
