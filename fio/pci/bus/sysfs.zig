@@ -94,12 +94,12 @@ fn enumerate(ctx: *anyopaque) anyerror!std.ArrayList(Device) {
 
     var iter = dir.iterate();
     while (try iter.next()) |entry| {
-        const domain = try std.fmt.parseInt(u32, entry.name[0..4], 10);
+        const domain = try std.fmt.parseInt(u32, entry.name[0..4], 16);
         if (self.domain != domain) continue;
 
-        const bus = try std.fmt.parseInt(u8, entry.name[5..7], 10);
-        const dev = try std.fmt.parseInt(u5, entry.name[8..10], 10);
-        const func = try std.fmt.parseInt(u3, entry.name[11..12], 10);
+        const bus = try std.fmt.parseInt(u8, entry.name[5..7], 16);
+        const dev = try std.fmt.parseInt(u5, entry.name[8..10], 16);
+        const func = try std.fmt.parseInt(u3, entry.name[11..12], 16);
 
         try devices.append(.{
             .base = &self.base,

@@ -86,6 +86,16 @@ pub const Bar64 = union(enum) {
 pub const Bar = union(enum) {
     @"32": Bar32,
     @"64": Bar64,
+
+    pub fn address(self: Bar) usize {
+        return switch (self) {
+            .@"32" => |a| switch (a) {
+                .mem => |mem| mem.addr,
+                .io => |io| io.address,
+            },
+            .@"64" => |b| b.mem.addr,
+        };
+    }
 };
 
 pub const Command = packed struct(u16) {

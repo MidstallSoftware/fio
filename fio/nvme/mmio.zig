@@ -70,7 +70,7 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn baseAddress(self: *const Self) usize {
-    return self.device.readBar(0).?.@"64".mem.addr;
+    return self.device.readBar(0).?.address();
 }
 
 pub fn capabilities(self: *const Self) types.Capabilities {
