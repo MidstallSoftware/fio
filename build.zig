@@ -13,8 +13,8 @@ pub fn build(b: *std.Build) void {
     });
 
     const fio = b.addModule("fio", .{
-        .source_file = .{ .path = b.pathFromRoot("fio.zig") },
-        .dependencies = &.{
+        .root_source_file = .{ .path = b.pathFromRoot("fio.zig") },
+        .imports = &.{
             .{
                 .name = "dtree",
                 .module = dtree.module("dtree"),
@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         });
 
-        unit_tests.addModule("dtree", dtree.module("dtree"));
+        unit_tests.root_module.addImport("dtree", dtree.module("dtree"));
 
         const run_unit_tests = b.addRunArtifact(unit_tests);
         step_test.dependOn(&run_unit_tests.step);
@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe_example.addModule("fio", fio);
-    exe_example.addModule("dtree", dtree.module("dtree"));
+    exe_example.root_module.addImport("fio", fio);
+    exe_example.root_module.addImport("dtree", dtree.module("dtree"));
     b.installArtifact(exe_example);
 }

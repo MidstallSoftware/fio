@@ -4,12 +4,12 @@
   .paths = .{"."},
   .dependencies = .{
     .metaplus = .{
-      .url = "https://github.com/MidstallSoftware/meta-plus/archive/6e27c96293e13d774816df618926aed5e31cd21c.tar.gz",
-      .hash = "12204a76801751523988241376847a5dfd4ce1d06ce7b07666a47d02570327dc3c05",
+      .url = "https://github.com/MidstallSoftware/meta-plus/archive/7a99d69a1d965e9598d9602ba4488babab50a6bf.tar.gz",
+      .hash = "122050a89efcff9674d40e4ba9f3bde81716cd982082a4725de3524318e2d9d69837",
     },
     .dtree = .{
-      .url = "https://github.com/MidstallSoftware/dtree/archive/da5052d06dc3c638d87ab3745dcb6f0daf81d46f.tar.gz",
-      .hash = "12203d59164a9095faee174e42817334c7e6ff7dc055bfcab7018e558d9c5cadf593",
+      .url = "https://github.com/MidstallSoftware/dtree/archive/c4357e843c3a93e06cbc9392438c076495c9a78a.tar.gz",
+      .hash = "122022f9826fa01dacf71a1197c10d16a6c3a37d566dbfe2facbb6ed40e14965d334",
     },
   },
 }
